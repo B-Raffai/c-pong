@@ -14,13 +14,7 @@
 #define PADDLECHAR '|'
 #define BALLCHAR '0'
 #define EMPTYCHAR ' '
-
     
-typedef struct Point {
-    float x;
-    float y;
-} Point;
-
 typedef struct Ball {
     int direction;
     float x;
@@ -47,6 +41,14 @@ void initialise(Pong *g, int x, int y) {
     (*g).ball.x = halfX;
     (*g).ball.y = halfY;
     (*g).ball.direction = 1;
+}
+bool isPaddle(Pong *g, float x, float y) {
+    x = floor(x);
+    y = floor(y);
+    return ( x == MARGIN || x == (*g).sizeX - 1  - MARGIN ) && 
+            ( y >= (*g).paddle1 || y >= (*g).paddle2 ) &&
+            ( y < (*g).paddle1 + PADDLESIZE ||
+              y < (*g).paddle2 + PADDLESIZE );
 }
 
 void draw(Pong *g) {
@@ -81,10 +83,7 @@ void draw(Pong *g) {
         for(int x = 0; x < maxX ; x++) {
             if(x == 0 || x == maxX - 1) {
                 nextChar = GOALCHAR;
-            } else if(( x == MARGIN || x == maxX - 1  - MARGIN ) && 
-                    ( y >= (*g).paddle1 || y >= (*g).paddle2 ) &&
-                    ( y < (*g).paddle1 + PADDLESIZE ||
-                      y < (*g).paddle2 + PADDLESIZE )) {
+            } else if(isPaddle(g, x, y)) {
                 nextChar = PADDLECHAR;
             } else if(x == floor((*g).ball.x) && y == floor((*g).ball.y)) {
                 nextChar = BALLCHAR;
@@ -108,7 +107,14 @@ void draw(Pong *g) {
 }
 
 void moveBall(Pong *g) {
-    float step = BALLSTEP;
+    float step = BALLSTEP * (*g).ball.direction;
+    float nextX = (*g).ball.x + step;
+
+    if(isPaddle(g, nextX, (*g).ball.y)) {
+        step *= -1;
+        (*g).ball.direction *= -1;
+    }
+
     (*g).ball.x += step;
 }
 
