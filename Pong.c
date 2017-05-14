@@ -4,17 +4,24 @@
 #include <time.h>
 #include <unistd.h>
 #include <ncurses.h>
-
+//config
 #define MARGIN 2
 #define PADDLESIZE 4
-#define BALLSTEP 0.1
+#define BALLSTEP 0.2
+//graphics
 #define BACKGROUND ' '
-
 #define GOALCHAR '#'
 #define PADDLECHAR '|'
 #define BALLCHAR '0'
 #define EMPTYCHAR ' '
-    
+//controls
+#define UP1 'w'
+#define DN1 's'
+#define UP2 'i' 
+#define DN2 'k'
+#define EXIT 'q'
+
+#define WELCOME "controls: ws, ik, q to quit \nPress any key to start"
 typedef struct Ball {
     int direction;
     float x;
@@ -24,8 +31,7 @@ typedef struct Ball {
 typedef struct Pong {
     int sizeX;
     int sizeY;
-    int paddle1;//paddle coordinates above lowest point
-    int paddle2;
+    int paddles[2];//paddle coordinates above lowest point
     Ball ball;
 } Pong;
 
@@ -36,19 +42,24 @@ void initialise(Pong *g, int x, int y) {
     
     (*g).sizeX = x;
     (*g).sizeY = y;
-    (*g).paddle1 = halfY - PADDLESIZE/2;
-    (*g).paddle2 = (*g).paddle1;
+    (*g).paddles[0] = halfY - PADDLESIZE/2;
+    (*g).paddles[1] = halfY - PADDLESIZE/2;
     (*g).ball.x = halfX;
     (*g).ball.y = halfY;
     (*g).ball.direction = 1;
 }
+
 bool isPaddle(Pong *g, float x, float y) {
     x = floor(x);
     y = floor(y);
+    /*
     return ( x == MARGIN || x == (*g).sizeX - 1  - MARGIN ) && 
-            ( y >= (*g).paddle1 || y >= (*g).paddle2 ) &&
-            ( y < (*g).paddle1 + PADDLESIZE ||
-              y < (*g).paddle2 + PADDLESIZE );
+            ( y >= (*g).paddles[0] || y >= (*g).paddles[1] ) &&
+            ( y < (*g).paddles[0] + PADDLESIZE ||
+              y < (*g).paddles[1] + PADDLESIZE ); */
+    return (x == MARGIN && y >= (*g).paddles[0] &&
+        y < (*g).paddles[0] + PADDLESIZE) || (x == (*g).sizeX - 1-  MARGIN &&
+        y >= (*g).paddles[1] && y < (*g).paddles[1] + PADDLESIZE);
 }
 
 void draw(Pong *g) {
@@ -57,28 +68,7 @@ void draw(Pong *g) {
 
     char screen[maxX][maxY];
     char nextChar;
-    /* 
-    //build up array of screen
-    for(int x = 0; x < maxX ; x++) {
-        for(int y = 0; y < maxY; y++) {
-            if(x == 0 || x == maxX - 1) {
-                nextChar = GOALCHAR;
-            } else if(x == MARGIN || x == maxX - 1  - MARGIN && 
-                    ( y > (*g).paddle1 || y > (*g).paddle2 ) &&
-                    ( y < (*g).paddle1 + PADDLESIZE ||
-                      y < (*g).paddle2 + PADDLESIZE )
-                    ) {
-                nextChar = PADDLECHAR;
-            } else if(x == (*g).ball.x && y == (*g).ball.y) {
-                nextChar = BALLCHAR;
-            } else {
-                nextChar = EMPTYCHAR;
-            }
-
-            screen[x][y] = nextChar;
-        }
-    }*/
-    
+    // build array
     for(int y = 0; y < maxY; y++) {
         for(int x = 0; x < maxX ; x++) {
             if(x == 0 || x == maxX - 1) {
@@ -122,6 +112,41 @@ void update(Pong *g) {
     moveBall(g);
 }
 
+void movePaddle(Pong *g, int p, int n) {
+    if((*g).paddles[p] + PADDLESIZE >= (*g).sizeY && n == 1) {
+        return;
+    } else if((*g).paddles[p] <= 0 && n == -1) {
+        return;
+    } else {
+        (*g).paddles[p] += n;
+    }
+}
+    
+void processInput(Pong *g) {
+    char c;
+    c = getch();
+    while(c >= 0) {
+        switch(c) {
+        case UP1 :
+            movePaddle(g, 0, -1);
+            break;
+        case DN1 :
+            movePaddle(g, 0, 1);
+            break;
+        case UP2 :
+            movePaddle(g, 1, -1);
+            break;
+        case DN2 :
+            movePaddle(g, 1, 1);
+            break;
+        case EXIT:
+            endwin();
+            exit(EXIT_SUCCESS);
+            break;
+        }
+        c = getch();
+    }
+}
 
 int main() {
     int w_x;
@@ -135,15 +160,19 @@ int main() {
 
     getmaxyx(stdscr, w_y, w_x);
 
+    printw("%s", WELCOME); 
+    refresh();
     initialise(game, w_x, w_y);
-   
+  
+    getch();
+    timeout(0);
     while(1) { 
+        processInput(game);
         draw(game);
         update(game);
         usleep(16*1000);
     }
 
-    getch();
     endwin();
     return 0;
 }
