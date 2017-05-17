@@ -7,7 +7,9 @@
 //config
 #define MARGIN 2
 #define PADDLESIZE 4
-#define BALLSTEP 0.2
+#define INITXVEL 0.2 //initial speed of ball
+#define ACCELERATION 1.15f //multiplies ball speed when a paddle is hit
+#define NANGLES 8 //number of angles the ball can bounce at
 //graphics
 #define BACKGROUND ' '
 #define GOALCHAR '#'
@@ -22,8 +24,11 @@
 #define EXIT 'q'
 
 #define WELCOME "controls: ws, ik, q to quit \nPress any key to start"
+
 typedef struct Ball {
     int direction;
+    float xvel;
+    float yvel;
     float x;
     float y;
 } Ball;
@@ -47,18 +52,17 @@ void initialise(Pong *g, int x, int y) {
     (*g).ball.x = halfX;
     (*g).ball.y = halfY;
     (*g).ball.direction = 1;
+    (*g).ball.xvel = INITXVEL;
+    (*g).ball.yvel = 0;
 }
 
 bool isPaddle(Pong *g, float x, float y) {
     x = floor(x);
     y = floor(y);
-    /*
-    return ( x == MARGIN || x == (*g).sizeX - 1  - MARGIN ) && 
-            ( y >= (*g).paddles[0] || y >= (*g).paddles[1] ) &&
-            ( y < (*g).paddles[0] + PADDLESIZE ||
-              y < (*g).paddles[1] + PADDLESIZE ); */
+
     return (x == MARGIN && y >= (*g).paddles[0] &&
-        y < (*g).paddles[0] + PADDLESIZE) || (x == (*g).sizeX - 1-  MARGIN &&
+        y < (*g).paddles[0] + PADDLESIZE) ||
+        (x == (*g).sizeX - 1-  MARGIN &&
         y >= (*g).paddles[1] && y < (*g).paddles[1] + PADDLESIZE);
 }
 
@@ -97,15 +101,18 @@ void draw(Pong *g) {
 }
 
 void moveBall(Pong *g) {
-    float step = BALLSTEP * (*g).ball.direction;
-    float nextX = (*g).ball.x + step;
+    float nextX = (*g).ball.x + (*g).ball.xvel ;
+    float nextY = (*g).ball.y + (*g).ball.yvel;
 
     if(isPaddle(g, nextX, (*g).ball.y)) {
-        step *= -1;
-        (*g).ball.direction *= -1;
+        (*g).ball.xvel *= -1 * ACCELERATION;
+        (*g).ball.yvel = (float) (rand() % NANGLES) / (NANGLES * 10.0f);
+    } else if (nextY < 0 || nextY > (*g).sizeY) {
+        (*g).ball.yvel *= -1;
     }
 
-    (*g).ball.x += step;
+    (*g).ball.x += (*g).ball.xvel;
+    (*g).ball.y += (*g).ball.yvel;
 }
 
 void update(Pong *g) {
